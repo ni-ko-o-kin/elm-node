@@ -40,18 +40,19 @@ type Output
 
 run : Job Input -> Result ( RunId, String ) (Job Output)
 run (Job runId input) =
+    let
+        go run_ input_ outputConstructor =
+            run_ input_
+                |> Result.map outputConstructor
+                |> Result.map (Job runId)
+                |> Result.mapError (\error -> ( runId, error ))
+    in
     case input of
         F1Input input_ ->
-            F1.run input_
-                |> Result.map F1Output
-                |> Result.map (Job runId)
-                |> Result.mapError (\error -> ( runId, error ))
+            go F1.run input_ F1Output
 
         F2Input input_ ->
-            F2.run input_
-                |> Result.map F2Output
-                |> Result.map (Job runId)
-                |> Result.mapError (\error -> ( runId, error ))
+            go F2.run input_ F2Output
 
 
 update : Msg -> () -> ( (), Cmd Msg )
