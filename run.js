@@ -18,7 +18,7 @@ const run = async (functionId, input) => {
           console.log(
             [
               `resolved runId: ${runId}`,
-              `    with input: ${input}`,
+              `    with input: ${JSON.stringify(input)}`,
               `    to output:  ${v.output}`,
               ""
             ].join("\n")
@@ -28,7 +28,7 @@ const run = async (functionId, input) => {
           console.log(
             [
               `rejected runId: ${runId}`,
-              `    with input: ${input}`,
+              `    with input: ${JSON.stringify(input)}`,
               `    to msg:     ${v.msg}`,
               ""
             ].join("\n")
@@ -60,12 +60,12 @@ const run = async (functionId, input) => {
     .fill(null)
     .map((_, idx) => run("f1", new Array(idx).fill(1)));
 
-  const f2s = new Array(14)
+  const f2s = new Array(15)
     .fill(null)
     .map((_, idx) => run("f2", "emosewa si mle".slice(idx)));
 
   try {
-    console.log(await Promise.all([...f1s, ...f2s]));
+    console.log(await Promise.allSettled([...f1s, ...f2s]));
   } catch (e) {
     console.error(e);
   }

@@ -12,9 +12,14 @@ type alias Output =
     Int
 
 
-run : Input -> Output
-run =
-    List.length
+run : Input -> Result String Output
+run input =
+    case List.length input of
+        0 ->
+            Err "to short"
+
+        n ->
+            Ok n
 
 
 decoder : D.Decoder Input

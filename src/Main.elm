@@ -7,14 +7,6 @@ import Json.Encode as E
 import Platform exposing (worker)
 
 
-type Msg
-    = Start D.Value
-
-
-type alias RunId =
-    String
-
-
 main : Program () () Msg
 main =
     worker
@@ -24,24 +16,42 @@ main =
         }
 
 
+type Msg
+    = Start D.Value
+
+
+type alias RunId =
+    String
+
+
+type Job a
+    = Job RunId a
+
+
 type Input
-    = F1Input RunId F1.Input
-    | F2Input RunId F2.Input
+    = F1Input F1.Input
+    | F2Input F2.Input
 
 
 type Output
-    = F1Output RunId F1.Output
-    | F2Output RunId F2.Output
+    = F1Output F1.Output
+    | F2Output F2.Output
 
 
-run : Input -> Output
-run input =
+run : Job Input -> Result ( RunId, String ) (Job Output)
+run (Job runId input) =
     case input of
-        F1Input runId input_ ->
-            F1.run input_ |> F1Output runId
+        F1Input input_ ->
+            F1.run input_
+                |> Result.map F1Output
+                |> Result.map (Job runId)
+                |> Result.mapError (\error -> ( runId, error ))
 
-        F2Input runId input_ ->
-            F2.run input_ |> F2Output runId
+        F2Input input_ ->
+            F2.run input_
+                |> Result.map F2Output
+                |> Result.map (Job runId)
+                |> Result.mapError (\error -> ( runId, error ))
 
 
 update : Msg -> () -> ( (), Cmd Msg )
@@ -50,9 +60,9 @@ update (Start value) _ =
         Err _ ->
             ( (), output Nothing )
 
-        Ok input ->
+        Ok job ->
             ( ()
-            , input
+            , job
                 |> run
                 |> encoder
                 |> Just
@@ -60,46 +70,58 @@ update (Start value) _ =
             )
 
 
+decoder : D.Decoder (Job Input)
 decoder =
-    D.field "functionId" D.string
-        |> D.andThen functionSelector
+    D.map2 Job
+        (D.field "runId" D.string)
+        (D.field "functionId" D.string
+            |> D.andThen decodeInput
+        )
 
 
-functionSelector : String -> D.Decoder Input
-functionSelector function =
+decodeInput : String -> D.Decoder Input
+decodeInput functionId =
     let
-        go inputConstructor inputDecoder =
-            D.map2 inputConstructor
-                (D.field "runId" D.string)
-                (D.field "input" inputDecoder)
+        go inpuDecoder inputConstructor =
+            D.field "input" inpuDecoder
+                |> D.map inputConstructor
     in
-    case function of
+    case functionId of
         "f1" ->
-            go F1Input F1.decoder
+            go F1.decoder F1Input
 
         "f2" ->
-            go F2Input F2.decoder
+            go F2.decoder F2Input
 
         _ ->
             D.fail "function not supported"
 
 
-encoder : Output -> E.Value
-encoder out =
+encoder : Result ( RunId, String ) (Job Output) -> E.Value
+encoder result =
     let
-        go runId result outputEncoder =
+        go runId outputEncoder output_ =
             E.object
                 [ ( "status", E.string "ok" )
                 , ( "runId", E.string runId )
-                , ( "output", outputEncoder result )
+                , ( "output", outputEncoder output_ )
                 ]
     in
-    case out of
-        F1Output runId result ->
-            go runId result F1.encoder
+    case result of
+        Ok (Job runId out) ->
+            case out of
+                F1Output output_ ->
+                    go runId F1.encoder output_
 
-        F2Output runId result ->
-            go runId result F2.encoder
+                F2Output output_ ->
+                    go runId F2.encoder output_
+
+        Err ( runId, error ) ->
+            E.object
+                [ ( "status", E.string "error" )
+                , ( "runId", E.string runId )
+                , ( "msg", E.string error )
+                ]
 
 
 port start : (D.Value -> msg) -> Sub msg

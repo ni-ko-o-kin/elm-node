@@ -12,9 +12,14 @@ type alias Output =
     String
 
 
-run : Input -> Output
-run =
-    String.reverse
+run : Input -> Result String Output
+run input =
+    case String.length input of
+        0 ->
+            Err "to short"
+
+        _ ->
+            Ok (String.reverse input)
 
 
 decoder : D.Decoder Input
