@@ -33,6 +33,10 @@ type Job a
     = Job JobId a
 
 
+type alias JobResult =
+    Result ( JobId, String ) (Job Output)
+
+
 type Input
     = F1Input F1.Input
     | F2Input F2.Input
@@ -43,7 +47,7 @@ type Output
     | F2Output F2.Output
 
 
-run : Job Input -> Result ( JobId, String ) (Job Output)
+run : Job Input -> JobResult
 run (Job jobId input) =
     let
         go run_ input_ outputConstructor =
@@ -78,7 +82,7 @@ decodeInput functionId =
             D.fail "function not supported"
 
 
-encodeOutput : Result ( JobId, String ) (Job Output) -> E.Value
+encodeOutput : JobResult -> E.Value
 encodeOutput result =
     let
         go jobId outputEncoder output_ =
