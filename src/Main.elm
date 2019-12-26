@@ -16,6 +16,11 @@ main =
         }
 
 
+update : Msg -> () -> ( (), Cmd Msg )
+update (Start value) _ =
+    ( (), initiate value )
+
+
 type Msg
     = Start D.Value
 
@@ -55,63 +60,6 @@ run (Job jobId input) =
             go F2.run input_ F2Output
 
 
-update : Msg -> () -> ( (), Cmd Msg )
-update (Start value) _ =
-    case D.decodeValue decodeJobId value of
-        Err e ->
-            ( ()
-            , output
-                (E.object
-                    [ ( "status", E.string "error" )
-                    , ( "msg", E.string (D.errorToString e) )
-                    ]
-                )
-            )
-
-        Ok jobId ->
-            case D.decodeValue decoder value of
-                Err e ->
-                    ( ()
-                    , output
-                        (E.object
-                            [ ( "status", E.string "error" )
-                            , ( "jobId", E.string jobId )
-                            , ( "msg", E.string (D.errorToString e) )
-                            ]
-                        )
-                    )
-
-                Ok job ->
-                    ( ()
-                    , job
-                        |> run
-                        |> encoder
-                        |> output
-                    )
-
-
-decodeJobId : D.Decoder String
-decodeJobId =
-    D.field "jobId" D.string
-        |> D.andThen
-            (\jobId ->
-                if String.length jobId == 32 then
-                    D.succeed jobId
-
-                else
-                    D.fail "invalid jobId length; only 32 chars allowed"
-            )
-
-
-decoder : D.Decoder (Job Input)
-decoder =
-    D.map2 Job
-        decodeJobId
-        (D.field "functionId" D.string
-            |> D.andThen decodeInput
-        )
-
-
 decodeInput : String -> D.Decoder Input
 decodeInput functionId =
     let
@@ -130,8 +78,8 @@ decodeInput functionId =
             D.fail "function not supported"
 
 
-encoder : Result ( JobId, String ) (Job Output) -> E.Value
-encoder result =
+encodeOutput : Result ( JobId, String ) (Job Output) -> E.Value
+encodeOutput result =
     let
         go jobId outputEncoder output_ =
             E.object
@@ -155,6 +103,57 @@ encoder result =
                 , ( "jobId", E.string jobId )
                 , ( "msg", E.string error )
                 ]
+
+
+initiate : E.Value -> Cmd Msg
+initiate value =
+    case D.decodeValue decodeJobId value of
+        Err e ->
+            output
+                (E.object
+                    [ ( "status", E.string "error" )
+                    , ( "msg", E.string (D.errorToString e) )
+                    ]
+                )
+
+        Ok jobId ->
+            case D.decodeValue decoder value of
+                Err e ->
+                    output
+                        (E.object
+                            [ ( "status", E.string "error" )
+                            , ( "jobId", E.string jobId )
+                            , ( "msg", E.string (D.errorToString e) )
+                            ]
+                        )
+
+                Ok job ->
+                    job
+                        |> run
+                        |> encodeOutput
+                        |> output
+
+
+decodeJobId : D.Decoder String
+decodeJobId =
+    D.field "jobId" D.string
+        |> D.andThen
+            (\jobId ->
+                if String.length jobId == 32 then
+                    D.succeed jobId
+
+                else
+                    D.fail "invalid jobId length; only 32 chars allowed"
+            )
+
+
+decoder : D.Decoder (Job Input)
+decoder =
+    D.map2 Job
+        decodeJobId
+        (D.field "functionId" D.string
+            |> D.andThen decodeInput
+        )
 
 
 port start : (D.Value -> msg) -> Sub msg
