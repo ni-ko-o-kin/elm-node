@@ -14,12 +14,12 @@ type alias Output =
 
 run : Input -> Result String Output
 run input =
-    case List.length input of
-        0 ->
+    case input of
+        [] ->
             Err "to short"
 
-        n ->
-            Ok n
+        _ ->
+            Ok <| List.length input
 
 
 decoder : D.Decoder Input
