@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+clear
 elm make src/Main.elm --output=elm-main.js
 
 while inotifywait -e close_write -r src
