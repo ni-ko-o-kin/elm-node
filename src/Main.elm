@@ -67,8 +67,8 @@ run (Job jobId input) =
 decodeInput : String -> D.Decoder Input
 decodeInput functionId =
     let
-        go inpuDecoder inputConstructor =
-            D.field "input" inpuDecoder
+        go inputDecoder inputConstructor =
+            D.field "input" inputDecoder
                 |> D.map inputConstructor
     in
     case functionId of
