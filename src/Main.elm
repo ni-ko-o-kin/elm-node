@@ -73,13 +73,13 @@ decodeInput functionId =
 
 
 encodeOutput : E.Value -> JobResult -> E.Value
-encodeOutput value result =
+encodeOutput input result =
     let
         go outputEncoder output_ =
             E.object
                 [ ( "status", E.string "ok" )
                 , ( "output", outputEncoder output_ )
-                , ( "input", value )
+                , ( "input", input )
                 ]
     in
     case result of
@@ -95,7 +95,7 @@ encodeOutput value result =
             E.object
                 [ ( "status", E.string "error" )
                 , ( "msg", E.string error )
-                , ( "input", value )
+                , ( "input", input )
                 ]
 
 
