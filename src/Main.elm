@@ -25,16 +25,12 @@ type Msg
     = Start D.Value
 
 
-type alias JobId =
-    String
-
-
 type Job a
-    = Job JobId a
+    = Job a
 
 
 type alias JobResult =
-    Result ( JobId, String ) (Job Output)
+    Result String (Job Output)
 
 
 type Input
@@ -48,13 +44,13 @@ type Output
 
 
 run : Job Input -> JobResult
-run (Job jobId input) =
+run (Job input) =
     let
         go run_ input_ outputConstructor =
             run_ input_
                 |> Result.map outputConstructor
-                |> Result.map (Job jobId)
-                |> Result.mapError (\error -> ( jobId, error ))
+                |> Result.map Job
+                |> Result.mapError (\error -> error)
     in
     case input of
         F1Input input_ ->
@@ -82,79 +78,55 @@ decodeInput functionId =
             D.fail "function not supported"
 
 
-encodeOutput : JobResult -> E.Value
-encodeOutput result =
+encodeOutput : E.Value -> JobResult -> E.Value
+encodeOutput value result =
     let
-        go jobId outputEncoder output_ =
+        go outputEncoder output_ =
             E.object
                 [ ( "status", E.string "ok" )
-                , ( "jobId", E.string jobId )
                 , ( "output", outputEncoder output_ )
+                , ( "input", value )
                 ]
     in
     case result of
-        Ok (Job jobId out) ->
+        Ok (Job out) ->
             case out of
                 F1Output output_ ->
-                    go jobId F1.encoder output_
+                    go F1.encoder output_
 
                 F2Output output_ ->
-                    go jobId F2.encoder output_
+                    go F2.encoder output_
 
-        Err ( jobId, error ) ->
+        Err error ->
             E.object
                 [ ( "status", E.string "error" )
-                , ( "jobId", E.string jobId )
                 , ( "msg", E.string error )
+                , ( "input", value )
                 ]
 
 
 initiate : E.Value -> Cmd Msg
 initiate value =
-    case D.decodeValue decodeJobId value of
+    case D.decodeValue decoder value of
         Err e ->
             output
                 (E.object
                     [ ( "status", E.string "error" )
                     , ( "msg", E.string (D.errorToString e) )
+                    , ( "input", value )
                     ]
                 )
 
-        Ok jobId ->
-            case D.decodeValue decoder value of
-                Err e ->
-                    output
-                        (E.object
-                            [ ( "status", E.string "error" )
-                            , ( "jobId", E.string jobId )
-                            , ( "msg", E.string (D.errorToString e) )
-                            ]
-                        )
-
-                Ok job ->
-                    job
-                        |> run
-                        |> encodeOutput
-                        |> output
-
-
-decodeJobId : D.Decoder String
-decodeJobId =
-    D.field "jobId" D.string
-        |> D.andThen
-            (\jobId ->
-                if String.length jobId == 32 then
-                    D.succeed jobId
-
-                else
-                    D.fail "invalid jobId length; only 32 chars allowed"
-            )
+        Ok job ->
+            job
+                |> run
+                |> encodeOutput value
+                |> output
 
 
 decoder : D.Decoder (Job Input)
 decoder =
-    D.map2 Job
-        decodeJobId
+    D.map Job
         (D.field "functionId" D.string
             |> D.andThen decodeInput
         )

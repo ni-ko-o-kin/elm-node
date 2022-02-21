@@ -6,44 +6,24 @@ const App = Elm.Main.init({});
 const output = App.ports.output;
 const start = App.ports.start;
 
-const run = async (functionId, input) => {
-  const jobId = randomBytes(16).toString("hex");
-  const p = new Promise((resolve) => {
-    try {
-      let timeout;
-      const go = (v) => {
-        if (v.jobId === jobId) {
-          clearTimeout(timeout);
-          output.unsubscribe(go);
-          log({ ...v, input });
-
-          if (v.status === "ok") {
-            resolve({ ok: v.output });
-          } else if (v.status === "error") {
-            resolve({ error: v.msg });
-          } else {
-            resolve({ error: "invalid response status" });
-          }
-        }
-      };
-
-      output.subscribe(go);
-
-      timeout = setTimeout(() => {
-        output.unsubscribe(go);
-        resolve({ error: "invalid jobId or time limit exceeded" });
-      }, 20 * 1000);
-    } catch (e) {
-      resolve({ error: "unexpected error" });
-    }
+const run = async (functionId, input) =>
+  new Promise((resolve) => {
+    start.send({
+      functionId,
+      input,
+      resolve,
+    });
   });
 
-  setTimeout(() => {
-    start.send({ jobId, functionId, input });
-  }, Math.random() * 1000);
-
-  return p;
-};
+output.subscribe(({ status, msg, output, input: { resolve } }) => {
+  if (status === "ok") {
+    resolve({ ok: output });
+  } else if (status === "error") {
+    resolve({ error: msg });
+  } else {
+    resolve({ error: "invalid response status" });
+  }
+});
 
 (async () => {
   try {

@@ -1,15 +1,14 @@
 const DEBUG = true;
 
-const log = ({ jobId, status, input, msg, output }) => {
+const log = ({ status, input, msg, output }) => {
   if (DEBUG) {
     if (status === "ok") {
       console.log(
         [
           "",
           `ok =========================================`,
-          `jobId:  ${jobId}`,
           `input:  ${JSON.stringify(input)}`,
-          `output: ${output}`
+          `output: ${output}`,
         ].join("\n")
       );
     } else if (status === "error") {
@@ -17,9 +16,8 @@ const log = ({ jobId, status, input, msg, output }) => {
         [
           "",
           `error ======================================`,
-          `jobId: ${jobId}`,
           `input: ${JSON.stringify(input)}`,
-          `msg:   ${msg}`
+          `msg:   ${msg}`,
         ].join("\n")
       );
     }
@@ -27,5 +25,5 @@ const log = ({ jobId, status, input, msg, output }) => {
 };
 
 module.exports = {
-  log
+  log,
 };
