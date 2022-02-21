@@ -45,7 +45,6 @@ run input =
         go run_ input_ outputConstructor =
             run_ input_
                 |> Result.map outputConstructor
-                |> Result.mapError (\error -> error)
     in
     case input of
         F1Input input_ ->
