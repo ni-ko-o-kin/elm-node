@@ -3,16 +3,15 @@ const { Elm } = require("./elm-main");
 const { log } = require("./log");
 
 const App = Elm.Main.init({});
+const output = App.ports.output;
+const start = App.ports.start;
 
 const run = async (functionId, input) => {
-  const output = App.ports.output;
-  const start = App.ports.start;
-
   const jobId = randomBytes(16).toString("hex");
-  const p = new Promise(resolve => {
+  const p = new Promise((resolve) => {
     try {
       let timeout;
-      const go = v => {
+      const go = (v) => {
         if (v.jobId === jobId) {
           clearTimeout(timeout);
           output.unsubscribe(go);
