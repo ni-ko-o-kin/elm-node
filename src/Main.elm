@@ -25,12 +25,8 @@ type Msg
     = Start D.Value
 
 
-type Job a
-    = Job a
-
-
 type alias JobResult =
-    Result String (Job Output)
+    Result String Output
 
 
 type Input
@@ -43,13 +39,12 @@ type Output
     | F2Output F2.Output
 
 
-run : Job Input -> JobResult
-run (Job input) =
+run : Input -> JobResult
+run input =
     let
         go run_ input_ outputConstructor =
             run_ input_
                 |> Result.map outputConstructor
-                |> Result.map Job
                 |> Result.mapError (\error -> error)
     in
     case input of
@@ -89,7 +84,7 @@ encodeOutput value result =
                 ]
     in
     case result of
-        Ok (Job out) ->
+        Ok out ->
             case out of
                 F1Output output_ ->
                     go F1.encoder output_
@@ -124,12 +119,10 @@ initiate value =
                 |> output
 
 
-decoder : D.Decoder (Job Input)
+decoder : D.Decoder Input
 decoder =
-    D.map Job
-        (D.field "functionId" D.string
-            |> D.andThen decodeInput
-        )
+    D.field "functionId" D.string
+        |> D.andThen decodeInput
 
 
 port start : (D.Value -> msg) -> Sub msg
